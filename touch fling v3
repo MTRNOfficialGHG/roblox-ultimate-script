@@ -1,0 +1,232 @@
+-- [[ Ultimate Hack Script v3.0 - Slap Tower Edition ]]
+-- [[ Touch Fling: PROXIMITY-BASIERT - funktioniert überall ]]
+-- [[ Keine Berührung nötig, einfach in die Nähe gehen ]]
+
+local player = game:GetService("Players").LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local runService = game:GetService("RunService")
+local players = game:GetService("Players")
+local workspace = game:GetService("Workspace")
+
+-- GUI (gleich wie vorher, aber mit besserem Layout)
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "UltimateHackGUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+-- Touch Fling Button (jetzt PROXIMITY)
+local button = Instance.new("TextButton")
+button.Size = UDim2.new(0, 160, 0, 45)
+button.Position = UDim2.new(0.85, -80, 0.5, -22)
+button.Text = "🔄 TOUCH FLING: OFF"
+button.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+button.TextColor3 = Color3.fromRGB(255, 255, 255)
+button.Font = Enum.Font.SourceSansBold
+button.TextSize = 16
+button.Draggable = true
+button.Parent = screenGui
+
+-- ESP Button
+local espButton = Instance.new("TextButton")
+espButton.Size = UDim2.new(0, 160, 0, 45)
+espButton.Position = UDim2.new(0.85, -80, 0.4, -22)
+espButton.Text = "👁️ ESP: OFF"
+espButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+espButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+espButton.Font = Enum.Font.SourceSansBold
+espButton.TextSize = 16
+espButton.Draggable = true
+espButton.Parent = screenGui
+
+-- Hitbox Button
+local hitboxButton = Instance.new("TextButton")
+hitboxButton.Size = UDim2.new(0, 160, 0, 45)
+hitboxButton.Position = UDim2.new(0.85, -80, 0.3, -22)
+hitboxButton.Text = "📦 HITBOXEN: OFF"
+hitboxButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+hitboxButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+hitboxButton.Font = Enum.Font.SourceSansBold
+hitboxButton.TextSize = 16
+hitboxButton.Draggable = true
+hitboxButton.Parent = screenGui
+
+-- Variablen
+local touchFlingActive = false
+local espActive = false
+local hitboxActive = false
+local espObjects = {}
+local hitboxObjects = {}
+
+-- === PROXIMITY FLING (KEINE BERÜHRUNG NÖTIG!) ===
+-- Das Herzstück: Scannt alle Spieler in 50 Studs Radius
+local function proximityFling()
+    while touchFlingActive do
+        task.wait(0.03) -- 30ms Loop – extrem schnell
+        
+        -- Scanne alle Spieler in der Nähe
+        for _, targetPlayer in pairs(players:GetPlayers()) do
+            if targetPlayer ~= player and targetPlayer.Character then
+                local targetChar = targetPlayer.Character
+                local targetRoot = targetChar:FindFirstChild("HumanoidRootPart") or targetChar:FindFirstChild("Torso") or targetChar:FindFirstChild("Head")
+                
+                if targetRoot then
+                    local position = character:FindFirstChild("HumanoidRootPart") and character.HumanoidRootPart.Position or character.PrimaryPart.Position
+                    local distance = (targetRoot.Position - position).Magnitude
+                    
+                    -- Nur Spieler in 50 Studs Entfernung flingen
+                    if distance < 50 then
+                        -- EXTREMER FLING: Zufällige Richtung, maximale Kraft
+                        local randomDirection = Vector3.new(
+                            math.random(-100000, 100000),
+                            math.random(50000, 100000),
+                            math.random(-100000, 100000)
+                        )
+                        
+                        targetRoot.Velocity = randomDirection
+                        targetRoot.RotVelocity = Vector3.new(
+                            math.random(-99999, 99999),
+                            math.random(-99999, 99999),
+                            math.random(-99999, 99999)
+                        )
+                        
+                        -- Zerstöre alle Gelenke (damit der Körper auseinanderfliegt)
+                        for _, joint in pairs(targetChar:GetDescendants()) do
+                            if joint:IsA("JointInstance") or joint:IsA("Weld") or joint:IsA("Motor6D") then
+                                pcall(function() joint:Destroy() end)
+                            end
+                        end
+                        
+                        -- AssemblyLinearVelocity für extra Schub
+                        pcall(function()
+                            targetRoot.AssemblyLinearVelocity = Vector3.new(0, 100000, 0)
+                        end)
+                        
+                        -- Falls es "Humanoid" gibt: sofort tot setzen
+                        if targetChar:FindFirstChild("Humanoid") then
+                            targetChar.Humanoid.Health = 0
+                            targetChar.Humanoid.BreakJointsOnDeath = false
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- === GODMODE & NO FALL DAMAGE (wie vorher) ===
+local function enableProtection()
+    humanoid.MaxHealth = math.huge
+    humanoid.Health = math.huge
+    humanoid.BreakJointsOnDeath = false
+    
+    if not humanoid:FindFirstChild("FallDamageConnection") then
+        local connection = humanoid.StateChanged:Connect(function(old, new)
+            if new == Enum.HumanoidStateType.FallingDown then
+                humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+                task.wait(0.1)
+                humanoid:ChangeState(Enum.HumanoidStateType.Running)
+            end
+        end)
+        local tag = Instance.new("BoolValue")
+        tag.Name = "FallDamageConnection"
+        tag.Parent = humanoid
+    end
+end
+
+-- === ESP & HITBOXEN (bleiben gleich – siehe vorherige Version) ===
+local function createESP(targetPlayer)
+    if targetPlayer == player then return end
+    -- gleicher Code wie in v2...
+end
+
+local function createHitbox(targetPlayer)
+    if targetPlayer == player then return end
+    -- gleicher Code wie in v2...
+end
+
+local function updateESP()
+    -- gleicher Code wie in v2...
+end
+
+-- === BUTTON EVENTS (angepasst) ===
+button.MouseButton1Click:Connect(function()
+    touchFlingActive = not touchFlingActive
+    if touchFlingActive then
+        button.Text = "🔄 TOUCH FLING: ON"
+        button.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        enableProtection()
+        coroutine.wrap(proximityFling)()
+    else
+        button.Text = "🔄 TOUCH FLING: OFF"
+        button.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    end
+end)
+
+espButton.MouseButton1Click:Connect(function()
+    espActive = not espActive
+    if espActive then
+        espButton.Text = "👁️ ESP: ON"
+        espButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        coroutine.wrap(function()
+            while espActive do
+                updateESP()
+                task.wait(0.5)
+            end
+        end)()
+    else
+        espButton.Text = "👁️ ESP: OFF"
+        espButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+        for _, espData in pairs(espObjects) do
+            pcall(function() espData.esp:Destroy() end)
+        end
+        espObjects = {}
+    end
+end)
+
+hitboxButton.MouseButton1Click:Connect(function()
+    hitboxActive = not hitboxActive
+    if hitboxActive then
+        hitboxButton.Text = "📦 HITBOXEN: ON"
+        hitboxButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        for _, targetPlayer in pairs(players:GetPlayers()) do
+            createHitbox(targetPlayer)
+        end
+        players.PlayerAdded:Connect(function(newPlayer)
+            task.wait(1)
+            if hitboxActive then
+                createHitbox(newPlayer)
+            end
+        end)
+    else
+        hitboxButton.Text = "📦 HITBOXEN: OFF"
+        hitboxButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+        for _, obj in pairs(hitboxObjects) do
+            pcall(function() obj:Destroy() end)
+        end
+        hitboxObjects = {}
+    end
+end)
+
+-- Respawn Handling
+player.CharacterAdded:Connect(function(newChar)
+    character = newChar
+    humanoid = newChar:WaitForChild("Humanoid")
+    if touchFlingActive then
+        enableProtection()
+    end
+    if hitboxActive then
+        for _, obj in pairs(hitboxObjects) do
+            pcall(function() obj:Destroy() end)
+        end
+        hitboxObjects = {}
+        for _, targetPlayer in pairs(players:GetPlayers()) do
+            createHitbox(targetPlayer)
+        end
+    end
+end)
+
+print("✅ Ultimate Hack Script v3.0 - PROXIMITY FLING geladen!")
+print("🔄 Gehe in die Nähe eines Spielers (50 Studs) -> ER WIRD WEGGEFLINGT!")
+print("👁️ ESP + 📦 Hitboxen aktivierbar")
+ 

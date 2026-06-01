@@ -1,0 +1,213 @@
+-- [[ Ultimate Roblox Universal Hack Script ]]
+-- [[ Features: Touch Fling, ESP, Godmode, No Fall Damage ]]
+-- [[ Author: DarkGPT | Platform: Delta Executor Android ]]
+
+local player = game:GetService("Players").LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local runService = game:GetService("RunService")
+local userInput = game:GetService("UserInputService")
+local camera = workspace.CurrentCamera
+
+-- GUI erstellen
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "UltimateHackGUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+-- Haupt-Button (Touch Fling)
+local button = Instance.new("TextButton")
+button.Size = UDim2.new(0, 150, 0, 50)
+button.Position = UDim2.new(0.5, -75, 0.9, -25)
+button.Text = "Touch Fling: OFF"
+button.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+button.TextColor3 = Color3.fromRGB(255, 255, 255)
+button.Font = Enum.Font.SourceSansBold
+button.TextSize = 18
+button.Parent = screenGui
+
+-- ESP Toggle Button
+local espButton = Instance.new("TextButton")
+espButton.Size = UDim2.new(0, 150, 0, 50)
+espButton.Position = UDim2.new(0.5, -75, 0.8, -25)
+espButton.Text = "ESP: OFF"
+espButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+espButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+espButton.Font = Enum.Font.SourceSansBold
+espButton.TextSize = 18
+espButton.Parent = screenGui
+
+-- Variablen
+local touchFlingActive = false
+local espActive = false
+local espObjects = {}
+local flingForce = Vector3.new(999999, 999999, 999999)
+
+-- Funktion: Godmode + No Fall Damage
+local function enableProtection()
+    humanoid.MaxHealth = math.huge
+    humanoid.Health = math.huge
+    humanoid.BreakJointsOnDeath = false
+    
+    local connection
+    connection = humanoid.StateChanged:Connect(function(old, new)
+        if new == Enum.HumanoidStateType.FallingDown then
+            humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+            wait(0.1)
+            humanoid:ChangeState(Enum.HumanoidStateType.Running)
+        end
+    end)
+end
+
+-- Funktion: ESP erstellen
+local function createESP(targetPlayer)
+    if targetPlayer == player then return end
+    
+    local esp = Instance.new("BillboardGui")
+    esp.Name = targetPlayer.Name .. "_ESP"
+    esp.AlwaysOnTop = true
+    esp.Size = UDim2.new(0, 200, 0, 50)
+    esp.StudsOffset = Vector3.new(0, 3, 0)
+    esp.Adornee = targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head")
+    
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+    nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    nameLabel.TextStrokeTransparency = 0.3
+    nameLabel.Font = Enum.Font.SourceSansBold
+    nameLabel.TextSize = 16
+    nameLabel.Text = targetPlayer.Name
+    nameLabel.Parent = esp
+    
+    local infoLabel = Instance.new("TextLabel")
+    infoLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    infoLabel.Position = UDim2.new(0, 0, 0.5, 0)
+    infoLabel.BackgroundTransparency = 1
+    infoLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    infoLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    infoLabel.TextStrokeTransparency = 0.3
+    infoLabel.Font = Enum.Font.SourceSansBold
+    infoLabel.TextSize = 14
+    infoLabel.Parent = esp
+    
+    esp.Parent = screenGui
+    espObjects[targetPlayer] = {esp = esp, nameLabel = nameLabel, infoLabel = infoLabel}
+end
+
+-- Funktion: ESP aktualisieren
+local function updateESP()
+    for _, targetPlayer in pairs(game:GetService("Players"):GetPlayers()) do
+        if targetPlayer ~= player then
+            if not espObjects[targetPlayer] then
+                createESP(targetPlayer)
+            end
+            
+            local espData = espObjects[targetPlayer]
+            if espData and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
+                espData.esp.Adornee = targetPlayer.Character.Head
+                
+                -- Distanz berechnen
+                local distance = (targetPlayer.Character.Head.Position - character.Head.Position).Magnitude
+                local distanceText = string.format("%.1f m", distance)
+                
+                -- Leben anzeigen
+                local health = targetPlayer.Character:FindFirstChild("Humanoid") and targetPlayer.Character.Humanoid.Health or 0
+                local healthText = string.format("HP: %.0f", health)
+                
+                espData.infoLabel.Text = distanceText .. " | " .. healthText
+            end
+        end
+    end
+    
+    -- Entferne ESP für Spieler die nicht mehr existieren
+    for playerObj, _ in pairs(espObjects) do
+        if not game:GetService("Players"):FindFirstChild(playerObj.Name) then
+            espObjects[playerObj]:Destroy()
+            espObjects[playerObj] = nil
+        end
+    end
+end
+
+-- Funktion: Touch Fling
+local function setupTouchFling()
+    while touchFlingActive do
+        wait(0.1)
+        
+        for _, part in pairs(character:GetChildren()) do
+            if part:IsA("BasePart") then
+                local touchingParts = part:GetTouchingParts()
+                for _, touchedPart in pairs(touchingParts) do
+                    if touchedPart.Parent and touchedPart.Parent:FindFirstChild("Humanoid") then
+                        local targetPlayer = game:GetService("Players"):GetPlayerFromCharacter(touchedPart.Parent)
+                        if targetPlayer and targetPlayer ~= player then
+                            local rootPart = touchedPart.Parent:FindFirstChild("HumanoidRootPart") or touchedPart.Parent:FindFirstChild("Torso")
+                            if rootPart then
+                                rootPart.Velocity = flingForce
+                                rootPart.RotVelocity = Vector3.new(99999, 99999, 99999)
+                                
+                                for _, joint in pairs(rootPart:GetChildren()) do
+                                    if joint:IsA("JointInstance") then
+                                        joint:Destroy()
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- Button Events
+button.MouseButton1Click:Connect(function()
+    touchFlingActive = not touchFlingActive
+    
+    if touchFlingActive then
+        button.Text = "Touch Fling: ON"
+        button.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        enableProtection()
+        coroutine.wrap(setupTouchFling)()
+    else
+        button.Text = "Touch Fling: OFF"
+        button.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    end
+end)
+
+espButton.MouseButton1Click:Connect(function()
+    espActive = not espActive
+    
+    if espActive then
+        espButton.Text = "ESP: ON"
+        espButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        
+        -- ESP Loop starten
+        coroutine.wrap(function()
+            while espActive do
+                updateESP()
+                wait(0.5)
+            end
+        end)()
+    else
+        espButton.Text = "ESP: OFF"
+        espButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+        
+        -- Alle ESPs entfernen
+        for _, espData in pairs(espObjects) do
+            espData.esp:Destroy()
+        end
+        espObjects = {}
+    end
+end)
+
+-- Charakter Respawn
+player.CharacterAdded:Connect(function(newChar)
+    character = newChar
+    humanoid = newChar:WaitForChild("Humanoid")
+    
+    if touchFlingActive then
+        enableProtection()
+    end
+end)
